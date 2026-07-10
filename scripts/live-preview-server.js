@@ -351,6 +351,17 @@ function previewShell() {
         event.stopPropagation();
         selectElement(event.target, event);
       }, true);
+      doc.addEventListener("mouseup", () => {
+        setTimeout(() => selectTextRange(doc), 0);
+      }, true);
+      doc.addEventListener("keyup", event => {
+        if (!editMode || !event.shiftKey) return;
+        selectTextRange(doc);
+      }, true);
+      doc.addEventListener("selectionchange", () => {
+        clearTimeout(doc.__hlpSelectionTimer);
+        doc.__hlpSelectionTimer = setTimeout(() => selectTextRange(doc), 80);
+      });
       observeDynamicDom(doc);
     }
     function observeDynamicDom(doc) {
@@ -386,7 +397,7 @@ function previewShell() {
         ? "Editing dynamic DOM locally. Click Done to sync the current rendered snapshot."
         : "Editing locally. Click Done to sync changes.";
     }
-    function selectElement(el, event) {
+    function selectElement(el, event, options = {}) {
       if (!el || el === frame.contentDocument?.documentElement) return;
       selectedEl?.removeAttribute("data-hlp-selected");
       cleanupInlineEditor(selectedEl);
@@ -394,9 +405,34 @@ function previewShell() {
       selectionSnapshot = captureSelectionSnapshot(el);
       selectedEl.setAttribute("data-hlp-selected", "true");
       selectedLabel.textContent = elementLabel(el);
-      if (hasEditableText(el)) enableInlineEditor(el, event);
+      if (hasEditableText(el)) enableInlineEditor(el, event, options);
       renderInspector(el);
-      status.textContent = "Element selected. Type directly in the page or use the controls.";
+      status.textContent = options.status || "Element selected. Type directly in the page or use the controls.";
+    }
+    function selectTextRange(doc) {
+      if (!editMode || !doc) return;
+      const win = doc.defaultView;
+      const selection = win?.getSelection();
+      if (!selection || selection.isCollapsed || !selection.toString().trim()) return;
+      const range = selection.rangeCount ? selection.getRangeAt(0) : null;
+      let node = range?.commonAncestorContainer;
+      if (!node) return;
+      if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+      if (!node?.closest) return;
+      const textEl = closestEditableTextElement(node);
+      if (!textEl) return;
+      selectElement(textEl, null, {
+        preserveSelection: true,
+        status: "Text selected. Use the Text controls or type directly in the page."
+      });
+    }
+    function closestEditableTextElement(node) {
+      let current = node;
+      while (current && current !== frame.contentDocument?.documentElement) {
+        if (current.nodeType === Node.ELEMENT_NODE && hasEditableText(current)) return current;
+        current = current.parentElement;
+      }
+      return null;
     }
     function hasEditableText(el) {
       if (!el) return false;
@@ -491,7 +527,7 @@ function previewShell() {
       };
       return groups[groupName] || [];
     }
-    function enableInlineEditor(el, event) {
+    function enableInlineEditor(el, event, options = {}) {
       if (!el) return;
       if (["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName)) {
         el.focus();
@@ -509,7 +545,7 @@ function previewShell() {
       el.addEventListener("input", syncInlineText);
       frame.contentWindow?.focus();
       el.focus();
-      placeCaretFromPoint(el, event);
+      if (!options.preserveSelection) placeCaretFromPoint(el, event);
     }
     function cleanupInlineEditor(el) {
       if (!el) return;

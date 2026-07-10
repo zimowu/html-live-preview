@@ -213,6 +213,22 @@ function previewShell() {
     #inspector textarea { grid-column: 1 / -1; margin-top: 4px; }
     #inspector .control-grid textarea { min-height: 58px; }
     #inspector input[type="range"] { height: 28px; }
+    .group-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 16px 0 8px; }
+    .group-head h2 { margin: 0; }
+    .reset-group {
+      width: 30px;
+      height: 30px;
+      margin: 0;
+      border-radius: 999px;
+      border: 1px solid #ded8ce;
+      background: #fffdfa;
+      color: #6d6459;
+      font-size: 15px;
+      line-height: 1;
+      display: grid;
+      place-items: center;
+    }
+    .reset-group:hover { background: #f4eee4; border-color: #d1c6b7; }
     .hint { margin: 10px 0 0; font-size: 12px; line-height: 1.4; color: #8d8174; }
     iframe { grid-column: 2; grid-row: 2; width: 100%; height: 100%; border: 0; background: white; }
     @media (max-width: 760px) {
@@ -272,6 +288,7 @@ function previewShell() {
     let restoring = false;
     let mutationObserver = null;
     let mutationTimer = 0;
+    let selectionSnapshot = null;
     const source = new EventSource("/events");
     source.addEventListener("reload", () => reloadFrame());
     source.addEventListener("adjustments", () => load());
@@ -374,6 +391,7 @@ function previewShell() {
       selectedEl?.removeAttribute("data-hlp-selected");
       cleanupInlineEditor(selectedEl);
       selectedEl = el;
+      selectionSnapshot = captureSelectionSnapshot(el);
       selectedEl.setAttribute("data-hlp-selected", "true");
       selectedLabel.textContent = elementLabel(el);
       if (hasEditableText(el)) enableInlineEditor(el, event);
@@ -406,6 +424,72 @@ function previewShell() {
       } else {
         el.textContent = value;
       }
+    }
+    function captureSelectionSnapshot(el) {
+      if (!el) return null;
+      const attrs = {};
+      for (const attr of ["src", "alt", "href", "placeholder", "poster", "value"]) {
+        if (el.hasAttribute?.(attr)) attrs[attr] = el.getAttribute(attr);
+      }
+      attrs.controls = el.hasAttribute?.("controls") ? "true" : "false";
+      const source = el.querySelector?.("source");
+      if (source?.hasAttribute("src")) attrs.sourceSrc = source.getAttribute("src");
+      return {
+        text: getElementText(el),
+        attrs,
+        style: el.getAttribute("style") || ""
+      };
+    }
+    function restoreSelectionSnapshot(groupName) {
+      if (!selectedEl || !selectionSnapshot) return;
+      pushHistory();
+      const styleKeys = resetKeysForGroup(groupName);
+      for (const key of styleKeys) selectedEl.style[key] = "";
+      if (groupName === "Text") {
+        setElementText(selectedEl, selectionSnapshot.text);
+        restoreAttrs(["href", "placeholder"]);
+      } else if (groupName === "Media") {
+        restoreAttrs(["src", "alt", "poster", "controls", "sourceSrc"]);
+      } else if (groupName === "All") {
+        selectedEl.setAttribute("style", selectionSnapshot.style);
+        setElementText(selectedEl, selectionSnapshot.text);
+        restoreAttrs(["src", "alt", "href", "placeholder", "poster", "controls", "sourceSrc", "value"]);
+      }
+      renderInspector(selectedEl);
+      markDirty();
+      status.textContent = groupName + " reset to original. Click Done to sync.";
+    }
+    function restoreAttrs(keys) {
+      for (const key of keys) {
+        const value = selectionSnapshot.attrs[key];
+        if (key === "controls") {
+          if (value === "true") selectedEl.setAttribute("controls", "");
+          else selectedEl.removeAttribute("controls");
+        } else if (key === "sourceSrc") {
+          const source = selectedEl.querySelector?.("source");
+          if (source) {
+            if (value == null) source.removeAttribute("src");
+            else source.setAttribute("src", value);
+          }
+        } else if (value == null) {
+          selectedEl.removeAttribute(key);
+        } else {
+          selectedEl.setAttribute(key, value);
+          if (key === "value" && "value" in selectedEl) selectedEl.value = value;
+        }
+      }
+      if (selectedEl.tagName === "VIDEO") selectedEl.load?.();
+    }
+    function resetKeysForGroup(groupName) {
+      const groups = {
+        Text: ["fontFamily", "fontSize", "color", "fontWeight", "fontStyle", "textDecorationLine", "textAlign", "lineHeight", "letterSpacing", "textTransform"],
+        Media: ["objectFit"],
+        "Media size": ["width", "height", "borderRadius", "objectPosition"],
+        Appearance: ["backgroundColor", "borderColor", "borderRadius", "opacity"],
+        "Spacing and Size": ["padding", "margin", "width", "minHeight"],
+        Layout: ["display", "flexDirection", "justifyContent", "alignItems", "gap"]
+      };
+      return groups[groupName] || [];
     }
     function enableInlineEditor(el, event) {
       if (!el) return;
@@ -554,9 +638,10 @@ function previewShell() {
       inspector.querySelectorAll("[data-content-key]").forEach(input => input.addEventListener("input", applyContentEdit));
       inspector.querySelectorAll("[data-style-key]").forEach(input => input.addEventListener(input.type === "color" || input.type === "range" ? "input" : "change", applyStyleEdit));
       inspector.querySelectorAll("[data-media-file]").forEach(input => input.addEventListener("change", applyMediaFile));
+      inspector.querySelectorAll("[data-reset-group]").forEach(button => button.addEventListener("click", () => restoreSelectionSnapshot(button.dataset.resetGroup)));
     }
     function group(title, fields) {
-      return '<section class="inspector-group"><h2>' + escapeHtml(title) + '</h2>' + fields.filter(Boolean).join("") + '</section>';
+      return '<section class="inspector-group"><div class="group-head"><h2>' + escapeHtml(title) + '</h2><button class="reset-group" type="button" title="Reset ' + escapeAttr(title) + '" aria-label="Reset ' + escapeAttr(title) + '" data-reset-group="' + escapeAttr(title) + '">↺</button></div>' + fields.filter(Boolean).join("") + '</section>';
     }
     function textArea(label, key, value, className = "") {
       return '<label class="' + escapeAttr(className) + '">' + escapeHtml(label) + '<textarea data-content-key="' + escapeAttr(key) + '">' + escapeHtml(value) + '</textarea></label>';

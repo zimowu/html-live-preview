@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "html_live_preview": {
+      "command": "bash",
+      "args": [
+        "./scripts/start-mcp.sh"
+      ],
+      "cwd": "."
+    }
+  }
+}

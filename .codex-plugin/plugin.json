@@ -1,0 +1,34 @@
+{
+  "name": "html-live-preview",
+  "version": "0.1.0+codex.20260710073837",
+  "description": "Live local HTML preview with edit mode, dynamic element inspector, and source sync tools.",
+  "author": {
+    "name": "Local developer"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "HTML Live Preview",
+    "shortDescription": "Preview HTML, enter edit mode, and inspect whichever element you select.",
+    "longDescription": "HTML Live Preview starts a project-local browser preview for single-file HTML work. Codex can stream updates into the preview file while the user enters edit mode, freely selects page elements, and gets a dynamic inspector with controls that match the selected element, such as text, media, typography, appearance, spacing, sizing, and layout. It also supports source sync, resetting to the initial preview snapshot, and setting the current page as the new baseline.",
+    "developerName": "Local developer",
+    "category": "Productivity",
+    "capabilities": [
+      "Local HTML preview",
+      "Live reload",
+      "Design adjustment panel",
+      "Direct text editing",
+      "Click-to-select element editing",
+      "Dynamic element inspector",
+      "HTML source sync tools",
+      "Reset to initial snapshot",
+      "Project-local state",
+      "MCP tools"
+    ],
+    "defaultPrompt": [
+      "Start a live HTML preview for this page and update it as you build.",
+      "Read my current HTML preview adjustments and apply them to the page.",
+      "Use HTML Live Preview while generating this single-file HTML report."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}

@@ -282,6 +282,7 @@ function previewShell() {
     source.addEventListener("reload", () => reloadFrame());
     source.addEventListener("adjustments", () => load());
     function reloadFrame() {
+      frame.removeAttribute("srcdoc");
       frame.src = "/content?t=" + Date.now();
     }
     async function load() {
@@ -305,6 +306,9 @@ function previewShell() {
       if (!enabled && editMode) {
         cleanupInlineEditor(selectedEl);
         selectedEl?.removeAttribute("data-hlp-selected");
+        selectedEl = null;
+        selectedLabel.textContent = "No element selected.";
+        renderInspector(null);
       }
       if (!enabled && editMode && dirty) {
         savePage();
@@ -339,6 +343,7 @@ function previewShell() {
       observeDynamicDom(doc);
     }
     function observeDynamicDom(doc) {
+      if (!doc?.documentElement) return;
       mutationObserver?.disconnect();
       mutationObserver = new doc.defaultView.MutationObserver(() => {
         clearTimeout(mutationTimer);
@@ -352,6 +357,7 @@ function previewShell() {
       });
     }
     async function handleDynamicDomChange(doc) {
+      if (restoring || !doc?.documentElement) return;
       await injectAdjustmentStyle();
       injectEditorStyle();
       if (selectedEl && !doc.documentElement.contains(selectedEl)) {
@@ -669,23 +675,22 @@ function previewShell() {
       redoStack = [];
     }
     function restoreSnapshot(html, label) {
-      const doc = frame.contentDocument;
-      if (!doc || !html) return;
+      if (!html) return;
       restoring = true;
       selectedEl = null;
       selectedLabel.textContent = "No element selected.";
       renderInspector(null);
-      doc.open();
-      doc.write(html);
-      doc.close();
-      setTimeout(async () => {
+      const finishRestore = async () => {
+        frame.removeEventListener("load", finishRestore);
         await injectAdjustmentStyle();
         injectEditorStyle();
         attachPicker();
         restoring = false;
         dirty = true;
         status.textContent = label + ". Click Done to sync.";
-      }, 0);
+      };
+      frame.addEventListener("load", finishRestore);
+      frame.srcdoc = html;
     }
     function undoEdit() {
       if (!undoStack.length) {

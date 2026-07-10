@@ -92,13 +92,7 @@ body {
   background: var(--hlp-background);
   color: var(--hlp-text);
 }
-main, .page, .container, .wrap, .content {
-  max-width: min(var(--hlp-max-width), calc(100vw - 32px));
-}
-section, article, .card, .panel {
-  border-radius: var(--hlp-radius);
-}
-a, button, .accent {
+body, a, button, input, progress {
   accent-color: var(--hlp-accent);
 }`;
 }

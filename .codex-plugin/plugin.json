@@ -1,6 +1,6 @@
 {
   "name": "html-live-preview",
-  "version": "0.1.0+codex.20260710111700",
+  "version": "0.1.0+codex.20260713070516",
   "description": "Live local HTML preview with edit mode, dynamic element inspector, and source sync tools.",
   "author": {
     "name": "Local developer"

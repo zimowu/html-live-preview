@@ -344,6 +344,23 @@ function previewShell() {
       doc.addEventListener("mouseout", event => {
         event.target?.removeAttribute("data-hlp-hover");
       }, true);
+      doc.addEventListener("pointerdown", event => {
+        if (!editMode || !isMediaElement(event.target)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        selectElement(event.target, event);
+      }, true);
+      doc.addEventListener("mousedown", event => {
+        if (!editMode || !isMediaElement(event.target)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        selectElement(event.target, event);
+      }, true);
+      doc.addEventListener("dragstart", event => {
+        if (!editMode || !isMediaElement(event.target)) return;
+        event.preventDefault();
+        event.stopPropagation();
+      }, true);
       doc.addEventListener("click", event => {
         if (!editMode) return;
         if (selectedEl && selectedEl.contains(event.target)) return;
@@ -437,11 +454,14 @@ function previewShell() {
     function hasEditableText(el) {
       if (!el) return false;
       const tag = el.tagName.toLowerCase();
-      const isMedia = ["img", "video", "canvas", "svg"].includes(tag);
+      const isMedia = isMediaElement(el);
       const isForm = ["input", "textarea", "select", "button"].includes(tag);
       const textTags = ["a", "button", "figcaption", "h1", "h2", "h3", "h4", "h5", "h6", "input", "label", "li", "p", "span", "strong", "textarea"];
       const hasDirectText = [...el.childNodes].some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim().length > 0);
       return !isMedia && getElementText(el).trim().length > 0 && (isForm || textTags.includes(tag) || el.childElementCount === 0 || hasDirectText);
+    }
+    function isMediaElement(el) {
+      return Boolean(el?.tagName && ["img", "video", "canvas", "svg"].includes(el.tagName.toLowerCase()));
     }
     function elementLabel(el) {
       const bits = [el.tagName.toLowerCase()];
@@ -909,7 +929,7 @@ function previewShell() {
       if (!doc || doc.getElementById("html-live-preview-editor-style")) return;
       const style = doc.createElement("style");
       style.id = "html-live-preview-editor-style";
-      style.textContent = "[data-hlp-hover='true']{outline:2px dashed #0ea5e9!important;outline-offset:3px!important;cursor:crosshair!important}[data-hlp-selected='true']{outline:3px solid #2563eb!important;outline-offset:4px!important}";
+      style.textContent = "[data-hlp-hover='true']{outline:2px dashed #0ea5e9!important;outline-offset:3px!important;cursor:crosshair!important}[data-hlp-selected='true']{outline:3px solid #2563eb!important;outline-offset:4px!important}img,video,canvas,svg{-webkit-user-drag:none!important;user-select:none!important}";
       doc.head.append(style);
     }
     load();

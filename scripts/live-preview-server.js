@@ -328,6 +328,13 @@ function previewShell() {
       topEditMode.classList.toggle("active", enabled);
       topEditMode.textContent = enabled ? "Done" : "Edit";
       status.textContent = enabled ? editModeStatus() : "Preview updates save into the live HTML file.";
+      if (enabled) installFrameTools();
+    }
+    function installFrameTools() {
+      injectAdjustmentStyle();
+      injectEditorStyle();
+      attachPicker();
+      frame.contentDocument?.addEventListener("keydown", handleUndoKey, true);
     }
     function attachPicker() {
       const doc = frame.contentDocument;
@@ -902,12 +909,7 @@ function previewShell() {
       load();
       status.textContent = "Restored initial preview.";
     });
-    frame.addEventListener("load", () => {
-      injectAdjustmentStyle();
-      injectEditorStyle();
-      attachPicker();
-      frame.contentDocument?.addEventListener("keydown", handleUndoKey, true);
-    });
+    frame.addEventListener("load", installFrameTools);
     document.getElementById("copy").addEventListener("click", async () => {
       const res = await fetch("/api/adjustments");
       await navigator.clipboard.writeText(JSON.stringify(await res.json(), null, 2));
